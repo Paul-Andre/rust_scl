@@ -46,26 +46,11 @@ impl std::str::FromStr for Note {
     }
 }
 
-
+/// The description must hold on a single line and the ratios in the Note::Ratio must be positive
 #[derive(Debug, PartialEq)]
 pub struct Scale {
-    description: String,
+    pub description: String,
     pub notes: Vec<Note>,
-}
-
-impl Scale {
-    pub fn new(description: String, notes: Vec<Note>) -> Scale {
-        Scale {
-            description: description.lines().next().unwrap_or("").to_string(),
-            notes: notes,
-        }
-    }
-    pub fn set_description(&mut self, description: &str) {
-        self.description = description.lines().next().unwrap_or("").to_string();
-    }
-    pub fn get_description(& self) -> &str {
-        &self.description
-    }
 }
 
 impl std::fmt::Display for Scale {
@@ -85,7 +70,6 @@ impl std::fmt::Display for Scale {
     }
 }
 
-/// Reads a string containing the contents of a scl file and returns a scl::Scale
 impl std::str::FromStr for Scale {
     type Err = &'static str;
     fn from_str(scale_string: &str) -> Result<Scale, &'static str> {
@@ -185,9 +169,9 @@ mod tests {
  1082.89214
  2/1"
             ).unwrap(),
-            Scale::new(
-                "1/4-comma meantone scale. Pietro Aaron's temperament (1523)".to_string(),
-                vec![
+            Scale{
+                description: "1/4-comma meantone scale. Pietro Aaron's temperament (1523)".to_string(),
+                notes: vec![
                     Note::Cents(76.04900),
                     Note::Cents(193.15686),
                     Note::Cents(310.26471),
@@ -201,7 +185,7 @@ mod tests {
                     Note::Cents(1082.89214),
                     Note::Ratio(Rational32::new(2,1)),
                 ],
-            )
+            }
         );
     }
 
