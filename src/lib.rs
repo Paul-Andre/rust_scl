@@ -11,10 +11,53 @@ pub enum Note {
     Ratio(Rational32),
 }
 
+impl std::fmt::Display for Note {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            &Note::Cents(cents) => try!(cents.fmt(f)),
+            &Note::Ratio(ratio) => try!(ratio.fmt(f)),
+        };
+        Ok( () )
+    }
+}
+
+/// represents a scale
 #[derive(Debug, PartialEq)]
 pub struct Scale {
     description: String,
-    notes: Vec<Note>,
+    pub notes: Vec<Note>,
+}
+
+impl Scale {
+    fn new(description: String, notes: Vec<Note>) -> Scale {
+        Scale {
+            description: description.lines().next().unwrap_or("").to_string(),
+            notes: notes,
+        }
+    }
+    fn set_description(&mut self, description: &str) {
+        self.description = description.lines().next().unwrap_or("").to_string();
+    }
+    fn get_description(& self) -> &str {
+        &self.description
+    }
+}
+
+impl std::fmt::Display for Scale {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        try!(self.description.fmt(f));
+        try!(writeln!(f,""));
+
+        try!(self.notes.len().fmt(f));
+        try!(writeln!(f,""));
+
+        for note in & self.notes {
+            try!(note.fmt(f));
+            try!(writeln!(f,""));
+        }
+
+        Ok( () )
+    }
 }
 
 /// Parses a note that either contains a period and is a cent value, or is a ratio.
@@ -41,8 +84,8 @@ pub fn parse_note(string: &str) -> Result<Note, &'static str> {
         }
     }
 }
-                
 
+/// Reads a string containing the contents of a scl file and returns a scl::Scale
 pub fn read(scale_string: &str) -> Result<Scale, &'static str> {
     let mut lines_without_comments = scale_string.lines()
         .filter(|line| !line.starts_with("!"));
@@ -140,9 +183,9 @@ mod tests {
  1082.89214
  2/1"
             ).unwrap(),
-            Scale{
-                description: "1/4-comma meantone scale. Pietro Aaron's temperament (1523)".to_string(),
-                notes: vec![
+            Scale::new(
+                "1/4-comma meantone scale. Pietro Aaron's temperament (1523)".to_string(),
+                vec![
                     Note::Cents(76.04900),
                     Note::Cents(193.15686),
                     Note::Cents(310.26471),
@@ -156,7 +199,9 @@ mod tests {
                     Note::Cents(1082.89214),
                     Note::Ratio(Rational32::new(2,1)),
                 ],
-            }
+            )
         );
     }
+
+
 }
