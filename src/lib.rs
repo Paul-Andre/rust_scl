@@ -4,8 +4,6 @@
 extern crate num;
 
 use num::rational::Rational32;
-use std::error::Error;
-
 
 #[derive(Debug, PartialEq)]
 pub enum Note {
@@ -13,6 +11,7 @@ pub enum Note {
     Ratio(Rational32),
 }
 
+#[derive(Debug, PartialEq)]
 pub struct Scale {
     description: String,
     notes: Vec<Note>,
@@ -44,54 +43,55 @@ pub fn parse_note(string: &str) -> Result<Note, &'static str> {
 }
                 
 
-/* 
 pub fn read(scale_string: &str) -> Result<Scale, &'static str> {
-    let lines_without_comments = scale_string.lines()
+    let mut lines_without_comments = scale_string.lines()
         .filter(|line| !line.starts_with("!"));
      
     let description = match lines_without_comments.next() {
-        Some(line) => line.clone(),
+        Some(line) => line.to_string(),
         None => {return Err("couldn't read description line");},
     };
 
-    let trimmed_lines = lines_without_comments.map(|line| line.trim());
+    let mut trimmed_lines = lines_without_comments.map(|line| line.trim());
 
     let number = match trimmed_lines.next() {
-        Some(line) => match line.parse::<u32>() {
+        Some(line) => match line.parse() {
             Ok(number) => number,
             Err(_) => {return Err("invalid number of notes");},
         },
         None => {return Err("couldn't read number of notes line");},
     };
 
-    let mut valid = true;
+    let mut notes = Vec::with_capacity(number);
 
-    let notes = trimmed_lines.map(|line| match line.split_whitespace().next() {
-        Some(note_string) => Some(parse_note(note_string)),
-        None => None,
-    })
-    .map(|double_wrapped_note| if let Some(Ok(note)) = double_wrapped_note {
-        Some(note)
+    for line in trimmed_lines {
+        notes.push( match match line.split_whitespace().next() {
+            Some(note_string) => parse_note(note_string),
+            None => {return Err("no note on line")},
+        } {
+            Ok(note) => note,
+            Err(message) => {return Err(message)},
+        });
+    }
+
+    if notes.len() == number {
+        Ok(Scale {
+            description: description,
+            notes: notes,
+        })
     }
     else {
-        None
-    })
-    .map(|wrapped_note| if wrapped_note.is_none
-    .take_while(|wrapped_note| wrapped_note.is_some())
-    .filter_map(|wrapped_note| wrapped_note)
-    .
-
-
-*/
-
-
-    
+        Err("number of notes doesn't match actual number of notes")
+    }
+}
 
 
 #[cfg(test)]
 mod tests {
     use Note;
     use parse_note;
+    use read;
+    use Scale;
     use num::rational::Rational32;
 
     #[test]
@@ -117,5 +117,46 @@ mod tests {
         parse_note("gourd").unwrap_err();
 
         parse_note("-1/2").unwrap_err();
+    }
+
+    #[test]
+    fn read_valid() {
+        assert_eq!(read(
+"! meanquar.scl
+!
+1/4-comma meantone scale. Pietro Aaron's temperament (1523)
+ 12
+!
+ 76.04900
+ 193.15686
+ 310.26471
+ 5/4 writing stuff here should do nothing
+ 503.42157
+ 579.47057
+ 696.57843
+ 25/16
+ 889.73529
+ 1006.84314
+ 1082.89214
+ 2/1"
+            ).unwrap(),
+            Scale{
+                description: "1/4-comma meantone scale. Pietro Aaron's temperament (1523)".to_string(),
+                notes: vec![
+                    Note::Cents(76.04900),
+                    Note::Cents(193.15686),
+                    Note::Cents(310.26471),
+                    Note::Ratio(Rational32::new(5,4)),
+                    Note::Cents(503.42157),
+                    Note::Cents(579.47057),
+                    Note::Cents(696.57843),
+                    Note::Ratio(Rational32::new(25,16)),
+                    Note::Cents(889.73529),
+                    Note::Cents(1006.84314),
+                    Note::Cents(1082.89214),
+                    Note::Ratio(Rational32::new(2,1)),
+                ],
+            }
+        );
     }
 }
