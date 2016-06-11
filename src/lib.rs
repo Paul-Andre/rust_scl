@@ -3,12 +3,12 @@
 
 extern crate num;
 
-use num::rational::Rational32;
+pub type RationalUint = num::rational::Ratio<u32>;
 
 #[derive(Debug, PartialEq)]
 pub enum Note {
     Cents(f64),
-    Ratio(Rational32),
+    Ratio(RationalUint),
 }
 
 impl std::fmt::Display for Note {
@@ -31,14 +31,9 @@ impl std::str::FromStr for Note {
             }
         }
         else {
-            match string.parse::<Rational32>() {
+            match string.parse::<RationalUint>() {
                 Ok(ratio) => {
-                    if num::Signed::is_negative(&ratio) {
-                        Err("ratio is negative")
-                    }
-                    else {
-                        Ok(Note::Ratio(ratio))
-                    }
+                    Ok(Note::Ratio(ratio))
                 }
                 Err(_) => Err("error parsing ratio value")
             }
@@ -120,8 +115,8 @@ impl std::str::FromStr for Scale {
 mod tests {
     use Note;
     use Scale;
+    use RationalUint;
     use std::str::FromStr;
-    use num::rational::Rational32;
 
     #[test]
     fn parse_note_valid_input() {
@@ -132,10 +127,10 @@ mod tests {
         assert_eq!(Note::from_str("1200.").unwrap(), Note::Cents(1200.0f64));
         
 
-        assert_eq!(Note::from_str("1").unwrap(), Note::Ratio(Rational32::new(1,1)));
-        assert_eq!(Note::from_str("2").unwrap(), Note::Ratio(Rational32::new(2,1)));
-        assert_eq!(Note::from_str("1/3").unwrap(), Note::Ratio(Rational32::new(1,3)));
-        assert_eq!(Note::from_str("2/3").unwrap(), Note::Ratio(Rational32::new(2,3)));
+        assert_eq!(Note::from_str("1").unwrap(), Note::Ratio(RationalUint::new(1,1)));
+        assert_eq!(Note::from_str("2").unwrap(), Note::Ratio(RationalUint::new(2,1)));
+        assert_eq!(Note::from_str("1/3").unwrap(), Note::Ratio(RationalUint::new(1,3)));
+        assert_eq!(Note::from_str("2/3").unwrap(), Note::Ratio(RationalUint::new(2,3)));
     }
 
     #[test]
@@ -175,19 +170,19 @@ mod tests {
                     Note::Cents(76.04900),
                     Note::Cents(193.15686),
                     Note::Cents(310.26471),
-                    Note::Ratio(Rational32::new(5,4)),
+                    Note::Ratio(RationalUint::new(5,4)),
                     Note::Cents(503.42157),
                     Note::Cents(579.47057),
                     Note::Cents(696.57843),
-                    Note::Ratio(Rational32::new(25,16)),
+                    Note::Ratio(RationalUint::new(25,16)),
                     Note::Cents(889.73529),
                     Note::Cents(1006.84314),
                     Note::Cents(1082.89214),
-                    Note::Ratio(Rational32::new(2,1)),
+                    Note::Ratio(RationalUint::new(2,1)),
                 ],
             }
         );
     }
 
-    //fn write_then
+    
 }
