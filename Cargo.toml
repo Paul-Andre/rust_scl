@@ -1,0 +1,7 @@
+[package]
+name = "scl"
+version = "0.1.0"
+authors = ["Paul-Andre Henegar <paul-andre.henegar@mail.mcgill.ca>"]
+
+[dependencies]
+num = "0.1"
