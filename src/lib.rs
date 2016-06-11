@@ -21,7 +21,32 @@ impl std::fmt::Display for Note {
     }
 }
 
-/// represents a scale
+impl std::str::FromStr for Note {
+    type Err = &'static str;
+    fn from_str(string: &str) -> Result<Note, &'static str> {
+        if string.contains(".") {
+            match string.parse::<f64>() {
+                Ok(cents) => Ok(Note::Cents(cents)),
+                Err(_) => Err("error parsing cent value"),
+            }
+        }
+        else {
+            match string.parse::<Rational32>() {
+                Ok(ratio) => {
+                    if num::Signed::is_negative(&ratio) {
+                        Err("ratio is negative")
+                    }
+                    else {
+                        Ok(Note::Ratio(ratio))
+                    }
+                }
+                Err(_) => Err("error parsing ratio value")
+            }
+        }
+    }
+}
+
+
 #[derive(Debug, PartialEq)]
 pub struct Scale {
     description: String,
@@ -29,16 +54,16 @@ pub struct Scale {
 }
 
 impl Scale {
-    fn new(description: String, notes: Vec<Note>) -> Scale {
+    pub fn new(description: String, notes: Vec<Note>) -> Scale {
         Scale {
             description: description.lines().next().unwrap_or("").to_string(),
             notes: notes,
         }
     }
-    fn set_description(&mut self, description: &str) {
+    pub fn set_description(&mut self, description: &str) {
         self.description = description.lines().next().unwrap_or("").to_string();
     }
-    fn get_description(& self) -> &str {
+    pub fn get_description(& self) -> &str {
         &self.description
     }
 }
@@ -60,71 +85,49 @@ impl std::fmt::Display for Scale {
     }
 }
 
-/// Parses a note that either contains a period and is a cent value, or is a ratio.
-///
-/// This function assumes that the passed string has been trimmed.
-pub fn parse_note(string: &str) -> Result<Note, &'static str> {
-    if string.contains(".") {
-        match string.parse::<f64>() {
-            Ok(cents) => Ok(Note::Cents(cents)),
-            Err(_) => Err("error parsing cent value"),
-        }
-    }
-    else {
-        match string.parse::<Rational32>() {
-            Ok(ratio) => {
-                if num::Signed::is_negative(&ratio) {
-                    Err("ratio is negative")
-                }
-                else {
-                    Ok(Note::Ratio(ratio))
-                }
-            }
-            Err(_) => Err("error parsing ratio value")
-        }
-    }
-}
-
 /// Reads a string containing the contents of a scl file and returns a scl::Scale
-pub fn read(scale_string: &str) -> Result<Scale, &'static str> {
-    let mut lines_without_comments = scale_string.lines()
-        .filter(|line| !line.starts_with("!"));
-     
-    let description = match lines_without_comments.next() {
-        Some(line) => line.to_string(),
-        None => {return Err("couldn't read description line");},
-    };
+impl std::str::FromStr for Scale {
+    type Err = &'static str;
+    fn from_str(scale_string: &str) -> Result<Scale, &'static str> {
+        let mut lines_without_comments = scale_string.lines()
+            .filter(|line| !line.starts_with("!"));
 
-    let mut trimmed_lines = lines_without_comments.map(|line| line.trim());
+        let description = match lines_without_comments.next() {
+            Some(line) => line.to_string(),
+            None => {return Err("couldn't read description line");},
+        };
 
-    let number = match trimmed_lines.next() {
-        Some(line) => match line.parse() {
-            Ok(number) => number,
-            Err(_) => {return Err("invalid number of notes");},
-        },
-        None => {return Err("couldn't read number of notes line");},
-    };
+        let mut trimmed_lines = lines_without_comments.map(|line| line.trim());
 
-    let mut notes = Vec::with_capacity(number);
+        let number = match trimmed_lines.next() {
+            Some(line) => match line.parse() {
+                Ok(number) => number,
+                Err(_) => {return Err("invalid number of notes");},
+            },
+            None => {return Err("couldn't read number of notes line");},
+        };
 
-    for line in trimmed_lines {
-        notes.push( match match line.split_whitespace().next() {
-            Some(note_string) => parse_note(note_string),
-            None => {return Err("no note on line")},
-        } {
-            Ok(note) => note,
-            Err(message) => {return Err(message)},
-        });
-    }
+        let mut notes = Vec::with_capacity(number);
 
-    if notes.len() == number {
-        Ok(Scale {
-            description: description,
-            notes: notes,
-        })
-    }
-    else {
-        Err("number of notes doesn't match actual number of notes")
+        for line in trimmed_lines {
+            notes.push( match match line.split_whitespace().next() {
+                Some(note_string) => Note::from_str(note_string),
+                None => {return Err("no note on line")},
+            } {
+                Ok(note) => note,
+                Err(message) => {return Err(message)},
+            });
+        }
+
+        if notes.len() == number {
+            Ok(Scale {
+                description: description,
+                notes: notes,
+            })
+        }
+        else {
+            Err("number of notes doesn't match actual number of notes")
+        }
     }
 }
 
@@ -132,39 +135,38 @@ pub fn read(scale_string: &str) -> Result<Scale, &'static str> {
 #[cfg(test)]
 mod tests {
     use Note;
-    use parse_note;
-    use read;
     use Scale;
+    use std::str::FromStr;
     use num::rational::Rational32;
 
     #[test]
     fn parse_note_valid_input() {
-        assert_eq!(parse_note("0.0").unwrap(), Note::Cents(0.0f64));
-        assert_eq!(parse_note("0.").unwrap(), Note::Cents(0.0f64));
-        assert_eq!(parse_note(".0").unwrap(), Note::Cents(0.0f64));
-        assert_eq!(parse_note("0.5").unwrap(), Note::Cents(0.5f64));
-        assert_eq!(parse_note("1200.").unwrap(), Note::Cents(1200.0f64));
+        assert_eq!(Note::from_str("0.0").unwrap(), Note::Cents(0.0f64));
+        assert_eq!(Note::from_str("0.").unwrap(), Note::Cents(0.0f64));
+        assert_eq!(Note::from_str(".0").unwrap(), Note::Cents(0.0f64));
+        assert_eq!(Note::from_str("0.5").unwrap(), Note::Cents(0.5f64));
+        assert_eq!(Note::from_str("1200.").unwrap(), Note::Cents(1200.0f64));
         
 
-        assert_eq!(parse_note("1").unwrap(), Note::Ratio(Rational32::new(1,1)));
-        assert_eq!(parse_note("2").unwrap(), Note::Ratio(Rational32::new(2,1)));
-        assert_eq!(parse_note("1/3").unwrap(), Note::Ratio(Rational32::new(1,3)));
-        assert_eq!(parse_note("2/3").unwrap(), Note::Ratio(Rational32::new(2,3)));
+        assert_eq!(Note::from_str("1").unwrap(), Note::Ratio(Rational32::new(1,1)));
+        assert_eq!(Note::from_str("2").unwrap(), Note::Ratio(Rational32::new(2,1)));
+        assert_eq!(Note::from_str("1/3").unwrap(), Note::Ratio(Rational32::new(1,3)));
+        assert_eq!(Note::from_str("2/3").unwrap(), Note::Ratio(Rational32::new(2,3)));
     }
 
     #[test]
     fn parse_note_not_valid_input() {
-        parse_note("").unwrap_err();
-        parse_note("a").unwrap_err();
-        parse_note("a1.32").unwrap_err();
-        parse_note("gourd").unwrap_err();
+        Note::from_str("").unwrap_err();
+        Note::from_str("a").unwrap_err();
+        Note::from_str("a1.32").unwrap_err();
+        Note::from_str("gourd").unwrap_err();
 
-        parse_note("-1/2").unwrap_err();
+        Note::from_str("-1/2").unwrap_err();
     }
 
     #[test]
-    fn read_valid() {
-        assert_eq!(read(
+    fn read_scale_valid() {
+        assert_eq!(Scale::from_str(
 "! meanquar.scl
 !
 1/4-comma meantone scale. Pietro Aaron's temperament (1523)
@@ -203,5 +205,5 @@ mod tests {
         );
     }
 
-
+    //fn write_then
 }
