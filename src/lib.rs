@@ -325,7 +325,6 @@ asd".parse::<Scale>().unwrap_err();
         wrapped_parsed_scale.unwrap();
 
         false
-
     }
 
     #[test]
@@ -336,12 +335,10 @@ asd".parse::<Scale>().unwrap_err();
     }
 
     #[test]
-    /// Problems found by quickcheck. It is related to both \n and \r\n being treated as a newline    
+    /// Problems found by quickcheck. It is related to both \n and \r\n being treated as a newline
     fn problematic_write_then_read_scales() {
         assert!(write_then_read_scale("!".to_string(),vec![]));
-        
         assert!(write_then_read_scale("\r".to_string(),vec![]));
-
         assert!(write_then_read_scale("\r!".to_string(),vec![]));
         assert!(write_then_read_scale("\r\r".to_string(),vec![]));
     }
