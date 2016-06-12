@@ -135,6 +135,9 @@ mod tests {
         assert_eq!(Note::from_str("2").unwrap(), Note::Ratio(RationalUint::new(2,1)));
         assert_eq!(Note::from_str("1/3").unwrap(), Note::Ratio(RationalUint::new(1,3)));
         assert_eq!(Note::from_str("2/3").unwrap(), Note::Ratio(RationalUint::new(2,3)));
+
+        assert_eq!(Note::from_str("2147483647/3").unwrap(),
+            Note::Ratio(RationalUint::new(2147483647,3)));
     }
 
     #[test]
@@ -266,7 +269,8 @@ asd".parse::<Scale>().unwrap_err();
     }
 
 
-    // note, at this point quickcheck only generates "well-behaving" values between -100 and 100
+    // note, at this point quickcheck only generates "well-behaving" values between -100 and 100 so
+    // it would be best to check if this works for crazier values as well
     impl quickcheck::Arbitrary for Note {
         fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Note {
             if g.gen() {
@@ -291,6 +295,6 @@ asd".parse::<Scale>().unwrap_err();
         quickcheck::quickcheck(write_then_read_note as fn(Note) -> bool)
     }
 
-    //fn write_then_read_scale(
+    // TODO make a quickcheck test for writing and reading a scale.
 
 }
