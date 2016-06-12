@@ -1,11 +1,12 @@
 //! This crate is for reading and writing Scala scale files (.scl).
 //! http://www.huygens-fokker.org/scala/scl_format.html
 
+
 extern crate num;
 
 pub type RationalUint = num::rational::Ratio<u32>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Note {
     Cents(f64),
     Ratio(RationalUint),
@@ -42,7 +43,7 @@ impl std::str::FromStr for Note {
 }
 
 /// The description must hold on a single line and the ratios in the Note::Ratio must be positive
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Scale {
     pub description: String,
     pub notes: Vec<Note>,
@@ -118,6 +119,9 @@ mod tests {
     use RationalUint;
     use std::str::FromStr;
 
+    extern crate quickcheck;
+
+
     #[test]
     fn parse_note_valid_input() {
         assert_eq!(Note::from_str("0.0").unwrap(), Note::Cents(0.0f64));
@@ -184,5 +188,33 @@ mod tests {
         );
     }
 
-    
+    impl quickcheck::Arbitrary for Note {
+        fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Note {
+            if g.gen() {
+                Note::Cents(quickcheck::Arbitrary::arbitrary(g))
+            }
+            else {
+                Note::Ratio(RationalUint::new(quickcheck::Arbitrary::arbitrary(g),
+                                              {let den = quickcheck::Arbitrary::arbitrary(g);
+                                                  if den==0 {1} else {den}
+                                              }))
+            }
+        }
+    }
+
+    //impl quickcheck::Arbitrary
+
+
+    fn write_then_read_note(note: Note) -> bool {
+        println!("{:?}", note);
+        (note.to_string().parse::<Note>()).unwrap() == note
+    }
+
+    #[test]
+    fn quickcheck_write_then_read_notes() {
+        quickcheck::quickcheck(write_then_read_note as fn(Note) -> bool)
+    }
+
+    //fn write_then_read_scale(
+
 }

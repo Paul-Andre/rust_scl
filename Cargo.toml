@@ -5,3 +5,6 @@ authors = ["Paul-Andre Henegar <paul-andre.henegar@mail.mcgill.ca>"]
 
 [dependencies]
 num = "0.1"
+
+[dev-dependencies]
+quickcheck = "0.2"
