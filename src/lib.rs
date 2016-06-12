@@ -16,7 +16,7 @@ impl std::fmt::Display for Note {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
             &Note::Cents(cents) => try!(cents.fmt(f)),
-            &Note::Ratio(ratio) => try!(ratio.fmt(f)),
+            &Note::Ratio(ratio) => try!(write!(f,"{}/{}",ratio.numer(),ratio.denom())),
         };
         Ok( () )
     }
@@ -55,11 +55,11 @@ impl std::fmt::Display for Scale {
         try!(writeln!(f,""));
 
         try!(self.notes.len().fmt(f));
-        try!(writeln!(f,""));
+        //try!(writeln!(f,""));
 
         for note in & self.notes {
-            try!(note.fmt(f));
             try!(writeln!(f,""));
+            try!(note.fmt(f));
         }
 
         Ok( () )
@@ -188,6 +188,50 @@ mod tests {
         );
     }
 
+    #[test]
+    fn write_scale() {
+        let written =
+            &(Scale{
+                description: "1/4-comma meantone scale. Pietro Aaron's temperament (1523)".to_string(),
+                notes: vec![
+                    Note::Cents(76.04900),
+                    Note::Cents(193.15686),
+                    Note::Cents(310.26471),
+                    Note::Ratio(RationalUint::new(5,4)),
+                    Note::Cents(503.42157),
+                    Note::Cents(579.47057),
+                    Note::Cents(696.57843),
+                    Note::Ratio(RationalUint::new(25,16)),
+                    Note::Cents(889.73529),
+                    Note::Cents(1006.84314),
+                    Note::Cents(1082.89214),
+                    Note::Ratio(RationalUint::new(2,1)),
+                ],
+            }.to_string());
+
+        let supposed =
+"1/4-comma meantone scale. Pietro Aaron's temperament (1523)
+12
+76.049
+193.15686
+310.26471
+5/4
+503.42157
+579.47057
+696.57843
+25/16
+889.73529
+1006.84314
+1082.89214
+2/1";
+        println!("{}",written);
+        println!("{}",supposed);
+
+        assert_eq!(written, supposed);
+    }
+
+
+    // note, at this point quickcheck only generates "well-behaving" values between -100 and 100
     impl quickcheck::Arbitrary for Note {
         fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Note {
             if g.gen() {
@@ -202,11 +246,8 @@ mod tests {
         }
     }
 
-    //impl quickcheck::Arbitrary
-
-
     fn write_then_read_note(note: Note) -> bool {
-        println!("{:?}", note);
+        //println!("{:?}", note);
         (note.to_string().parse::<Note>()).unwrap() == note
     }
 
