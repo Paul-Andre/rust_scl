@@ -166,7 +166,7 @@ mod tests {
  889.73529
  1006.84314
  1082.89214
- 2/1"
+ 2  "
             ).unwrap(),
             Scale{
                 description: "1/4-comma meantone scale. Pietro Aaron's temperament (1523)".to_string(),
@@ -186,6 +186,41 @@ mod tests {
                 ],
             }
         );
+        assert_eq!(Scale::from_str(
+                "test zero notes
+ 0
+!"
+            ).unwrap(),
+            Scale{
+                description: "test zero notes".to_string(),
+                notes: vec![ ],
+            }
+        );
+    }
+
+    #[test]
+    fn read_scale_not_valid() {
+        "".parse::<Scale>().unwrap_err();
+        "!".parse::<Scale>().unwrap_err();
+        "asdfasdf".parse::<Scale>().unwrap_err();
+
+"! 
+! ffdf".parse::<Scale>().unwrap_err();
+
+"ffdf
+asd".parse::<Scale>().unwrap_err();
+
+"ffdf
+-2".parse::<Scale>().unwrap_err();
+
+"ffdt
+1
+-1/2".parse::<Scale>().unwrap_err();
+
+"ffdt 
+0
+1/2".parse::<Scale>().unwrap_err();
+
     }
 
     #[test]
