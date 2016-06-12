@@ -1,15 +1,14 @@
 //! This crate is for reading and writing Scala scale files (.scl).
 //! http://www.huygens-fokker.org/scala/scl_format.html
 
-
 extern crate num;
 
-pub type RationalUint = num::rational::Ratio<u32>;
+use num::rational::Ratio;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Note {
     Cents(f64),
-    Ratio(RationalUint),
+    Ratio(Ratio<u32>),
 }
 
 impl std::fmt::Display for Note {
@@ -32,7 +31,7 @@ impl std::str::FromStr for Note {
             }
         }
         else {
-            match string.parse::<RationalUint>() {
+            match string.parse::<Ratio<u32>>() {
                 Ok(ratio) => {
                     Ok(Note::Ratio(ratio))
                 }
@@ -116,7 +115,7 @@ impl std::str::FromStr for Scale {
 mod tests {
     use Note;
     use Scale;
-    use RationalUint;
+    use num::rational::Ratio;
     use std::str::FromStr;
 
     extern crate quickcheck;
@@ -131,13 +130,13 @@ mod tests {
         assert_eq!(Note::from_str("1200.").unwrap(), Note::Cents(1200.0f64));
         
 
-        assert_eq!(Note::from_str("1").unwrap(), Note::Ratio(RationalUint::new(1,1)));
-        assert_eq!(Note::from_str("2").unwrap(), Note::Ratio(RationalUint::new(2,1)));
-        assert_eq!(Note::from_str("1/3").unwrap(), Note::Ratio(RationalUint::new(1,3)));
-        assert_eq!(Note::from_str("2/3").unwrap(), Note::Ratio(RationalUint::new(2,3)));
+        assert_eq!(Note::from_str("1").unwrap(), Note::Ratio(Ratio::new(1,1)));
+        assert_eq!(Note::from_str("2").unwrap(), Note::Ratio(Ratio::new(2,1)));
+        assert_eq!(Note::from_str("1/3").unwrap(), Note::Ratio(Ratio::new(1,3)));
+        assert_eq!(Note::from_str("2/3").unwrap(), Note::Ratio(Ratio::new(2,3)));
 
         assert_eq!(Note::from_str("2147483647/3").unwrap(),
-            Note::Ratio(RationalUint::new(2147483647,3)));
+            Note::Ratio(Ratio::new(2147483647,3)));
     }
 
     #[test]
@@ -177,15 +176,15 @@ mod tests {
                     Note::Cents(76.04900),
                     Note::Cents(193.15686),
                     Note::Cents(310.26471),
-                    Note::Ratio(RationalUint::new(5,4)),
+                    Note::Ratio(Ratio::new(5,4)),
                     Note::Cents(503.42157),
                     Note::Cents(579.47057),
                     Note::Cents(696.57843),
-                    Note::Ratio(RationalUint::new(25,16)),
+                    Note::Ratio(Ratio::new(25,16)),
                     Note::Cents(889.73529),
                     Note::Cents(1006.84314),
                     Note::Cents(1082.89214),
-                    Note::Ratio(RationalUint::new(2,1)),
+                    Note::Ratio(Ratio::new(2,1)),
                 ],
             }
         );
@@ -235,15 +234,15 @@ asd".parse::<Scale>().unwrap_err();
                     Note::Cents(76.04900),
                     Note::Cents(193.15686),
                     Note::Cents(310.26471),
-                    Note::Ratio(RationalUint::new(5,4)),
+                    Note::Ratio(Ratio::new(5,4)),
                     Note::Cents(503.42157),
                     Note::Cents(579.47057),
                     Note::Cents(696.57843),
-                    Note::Ratio(RationalUint::new(25,16)),
+                    Note::Ratio(Ratio::new(25,16)),
                     Note::Cents(889.73529),
                     Note::Cents(1006.84314),
                     Note::Cents(1082.89214),
-                    Note::Ratio(RationalUint::new(2,1)),
+                    Note::Ratio(Ratio::new(2,1)),
                 ],
             }.to_string());
 
@@ -269,7 +268,7 @@ asd".parse::<Scale>().unwrap_err();
     }
 
 
-    // note, at this point quickcheck only generates "well-behaving" values between -100 and 100 so
+    // TODO at this point quickcheck only generates "well-behaving" values between -100 and 100 so
     // it would be best to check if this works for crazier values as well
     impl quickcheck::Arbitrary for Note {
         fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Note {
@@ -277,13 +276,14 @@ asd".parse::<Scale>().unwrap_err();
                 Note::Cents(quickcheck::Arbitrary::arbitrary(g))
             }
             else {
-                Note::Ratio(RationalUint::new(quickcheck::Arbitrary::arbitrary(g),
+                Note::Ratio(Ratio::new(quickcheck::Arbitrary::arbitrary(g),
                                               {let den = quickcheck::Arbitrary::arbitrary(g);
                                                   if den==0 {1} else {den}
                                               }))
             }
         }
     }
+
 
     fn write_then_read_note(note: Note) -> bool {
         //println!("{:?}", note);
@@ -295,6 +295,54 @@ asd".parse::<Scale>().unwrap_err();
         quickcheck::quickcheck(write_then_read_note as fn(Note) -> bool)
     }
 
-    // TODO make a quickcheck test for writing and reading a scale.
 
+    fn write_then_read_scale(description: String, notes: Vec<Note>) -> bool {
+        let scale = Scale {
+            description: {
+                // Description should be only one line and not start with !
+                // TODO This should be a check when the scale is created or written
+                description.chars()
+                    .filter(|c| *c != '!' && *c != '\r' && *c != '\n').collect()
+            },
+            notes: notes,
+        };
+
+        let string = scale.to_string();
+        let wrapped_parsed_scale = string.parse::<Scale>();
+
+        if let Ok(ref parsed_scale) = wrapped_parsed_scale {
+            if scale == *parsed_scale {
+                return true;
+            }
+            else {
+                println!("{:?}", parsed_scale);
+            }
+        }
+
+        println!("{}", string);
+        println!("{:?}", scale);
+
+        wrapped_parsed_scale.unwrap();
+
+        false
+
+    }
+
+    #[test]
+    fn quickcheck_write_then_read_scales() {
+        for _ in 0..10 {
+            quickcheck::quickcheck(write_then_read_scale as fn(String, Vec<Note>) -> bool)
+        }
+    }
+
+    #[test]
+    /// Problems found by quickcheck. It is related to both \n and \r\n being treated as a newline    
+    fn problematic_write_then_read_scales() {
+        assert!(write_then_read_scale("!".to_string(),vec![]));
+        
+        assert!(write_then_read_scale("\r".to_string(),vec![]));
+
+        assert!(write_then_read_scale("\r!".to_string(),vec![]));
+        assert!(write_then_read_scale("\r\r".to_string(),vec![]));
+    }
 }
